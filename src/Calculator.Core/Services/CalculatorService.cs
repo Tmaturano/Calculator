@@ -1,4 +1,5 @@
-﻿using Calculator.Core.Models;
+﻿using Calculator.Core.Exceptions;
+using Calculator.Core.Models;
 using Calculator.Core.Parsers;
 using Calculator.Core.Validators;
 
@@ -32,10 +33,16 @@ public class CalculatorService : ICalculatorService
         }
         catch (Exception ex)
         {
+            var errorMessage = ex switch
+            {
+                NegativeNumberException ne => ne.Message,
+                _ => ex.Message
+            };
+
             return new CalculationResult
             {
                 Success = false,
-                ErrorMessage = ex.Message
+                ErrorMessage = errorMessage
             };
         }
     }

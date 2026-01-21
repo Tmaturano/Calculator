@@ -243,6 +243,111 @@ public class CalculatorServiceTests
         result.Result.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData("1,-2,3", new[] { -2 })]
+    [InlineData("-1,-2,-3", new[] { -1, -2, -3 })]
+    [InlineData("10,-5,-3,2", new[] { -5, -3 })]
+    [InlineData("-100", new[] { -100 })]
+    [InlineData("0,-1,0", new[] { -1 })]
+    public void Add_WithNegativeNumbers_ReturnsFailureWithMessage(string input, int[] expectedNegatives)
+    {
+        // Arrange
+        var numbers = ParseNumbersFromString(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+
+        // Setup validator to throw NegativeNumberException
+        _validator.When(v => v.Validate(numbers))
+            .Do(x => throw new NegativeNumberException(expectedNegatives.ToList()));
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Negative numbers are not allowed");
+
+        foreach (var negative in expectedNegatives)
+        {
+            result.ErrorMessage.Should().Contain(negative.ToString());
+        }
+    }
+
+    [Fact]
+    public void Add_WithMultipleNegativeNumbers_IncludesAllInErrorMessage()
+    {
+        // Arrange
+        var input = "1,-2,3,-4,5,-6";
+        var negativeNumbers = new List<int> { -2, -4, -6 };
+        var numbers = ParseNumbersFromString(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers))
+            .Do(x => throw new NegativeNumberException(negativeNumbers));
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Negative numbers are not allowed: -2, -4, -6");
+    }
+
+    [Theory]
+    [InlineData("1,2,3")]
+    [InlineData("0,0,0")]
+    [InlineData("10,20,30")]
+    [InlineData("100,200,300")]
+    public void Add_WithNoNegativeNumbers_ReturnsSuccess(string input)
+    {
+        // Arrange
+        var numbers = ParseNumbersFromString(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+    }
+
+    [Fact]
+    public void Add_WithMixedValidators_ValidatesCorrectly()
+    {
+        // Arrange
+        var input = "1,2,-3";
+        var numbers = new List<int> { 1, 2, -3 };
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+
+        // Validator should be called with the parsed numbers
+        _validator.When(v => v.Validate(Arg.Any<List<int>>()))
+            .Do(x =>
+            {
+                var nums = x.Arg<List<int>>();
+                if (nums.Any(n => n < 0))
+                    throw new NegativeNumberException(nums.Where(n => n < 0).ToList());
+            });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        _validator.Received(1).Validate(numbers);
+    }
+
 
     // Helper method to parse numbers from string for test setup
     private List<int> ParseNumbersFromString(string input)
