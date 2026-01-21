@@ -29,6 +29,11 @@ public class IntegrationTests
     [InlineData("1001,1002,1003", 0)]
     [InlineData("500,1500,2000,300", 800)]
     [InlineData("100\n1001,2000\n300", 400)]
+    [InlineData("//#\n2#5", 7)] 
+    [InlineData("//,\n2,ff,100", 102)]
+    [InlineData("//;\n1;2;3", 6)]
+    [InlineData("//*\n4*5*6", 15)]
+    [InlineData("//-\n10-20-30", 60)]
     public void Add_WithRealDependencies_ReturnsCorrectResult(string input, int expected)
     {
         // Act

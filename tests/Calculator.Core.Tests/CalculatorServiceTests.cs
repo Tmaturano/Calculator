@@ -26,7 +26,7 @@ public class CalculatorServiceTests
     [InlineData("1", 1)]
     [InlineData("1,2", 3)]
     [InlineData("20", 20)]
-    [InlineData("1,5000", 5001)]
+    [InlineData("1,5000", 1)]
     [InlineData("4,-3", 1)]
     public void Add_ValidInput_ReturnsCorrectSum(string input, int expected)
     {
@@ -416,6 +416,124 @@ public class CalculatorServiceTests
         result.Result.Should().Be(400); // 100 + 0 + 0 + 300
     }
 
+    [Theory]
+    [InlineData("//#\n2#5", 7)] // Requirement 6 example
+    [InlineData("//;\n1;2;3", 6)]
+    [InlineData("//;\n1;2", 3)]
+    [InlineData("//,\n2,ff,100", 102)] // Requirement 6 example
+    [InlineData("//*\n4*5*6", 15)]
+    [InlineData("// \n1 2 3", 6)] // Space as delimiter
+    [InlineData("//-\n10-20-30", 60)]
+    [InlineData("//.\n1.2.3.4.5", 15)]
+    public void Add_WithCustomSingleCharDelimiter_ReturnsCorrectSum(string input, int expected)
+    {
+        // Arrange
+        var numbers = ParseNumbersWithCustomDelimiter(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Add_WithCustomDelimiterAndLargeNumbers_HandlesCorrectly()
+    {
+        // Arrange
+        var input = "//#\n2#1001#6";
+        var numbers = new List<int> { 2, 0, 6 }; // 1001 becomes 0
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(8); // 2 + 0 + 6
+    }
+
+    [Fact]
+    public void Add_WithCustomDelimiterAndNegativeNumbers_ReturnsError()
+    {
+        // Arrange
+        var input = "//;\n1;-2;3;-4";
+        var numbers = new List<int> { 1, -2, 3, -4 };
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers))
+            .Do(x => throw new NegativeNumberException(new List<int> { -2, -4 }));
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Negative numbers are not allowed: -2, -4");
+    }
+
+    [Theory]
+    [InlineData("//#\n2#tytyt#100", 102)] // Invalid number becomes 0
+    [InlineData("//;\na;b;c", 0)] // All invalid
+    [InlineData("//,\n,2,,4,", 6)] // Empty entries
+    public void Add_WithCustomDelimiterAndInvalidNumbers_HandlesCorrectly(string input, int expected)
+    {
+        // Arrange
+        var numbers = ParseNumbersWithCustomDelimiter(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    // Helper method for custom delimiter parsing
+    private List<int> ParseNumbersWithCustomDelimiter(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [0];
+
+        // Simple implementation for test setup
+        if (input.StartsWith("//"))
+        {
+            int newLineIndex = input.IndexOf('\n');
+            if (newLineIndex == -1)
+                return [0];
+
+            char delimiter = input[2]; // Character after "//"
+            string numbersPart = input[(newLineIndex + 1)..];
+
+            return [.. numbersPart.Split(delimiter, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s =>
+                {
+                    if (int.TryParse(s, out int n))
+                        return n > 1000 ? 0 : n;
+                    return 0;
+                })];
+        }
+
+        return ParseNumbersFromString(input);
+    }
+
     // New helper method that respects the 1000 limit
     private List<int> ParseNumbersFromStringWithMax1000(string input)
     {
@@ -440,7 +558,13 @@ public class CalculatorServiceTests
         if (string.IsNullOrEmpty(input))
             return [0];
 
-        return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(s => int.TryParse(s, out int n) ? n : 0)];
+        return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(s =>
+            {
+                if (int.TryParse(s, out int n))
+                    return n > 1000 ? 0 : n;
+                return 0;
+            })];
     }
 
     // New helper method specifically for newline tests

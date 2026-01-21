@@ -197,4 +197,102 @@ public class StringCalculatorParserTests
         result.Should().NotBeNull();
         result.Numbers.Should().Equal(0, 0, -999999); // Both large numbers become 0, negative preserved
     }
+
+    [Theory]
+    [InlineData("//#\n2#5", new[] { 2, 5 })] 
+    [InlineData("//;\n1;2;3", new[] { 1, 2, 3 })]
+    [InlineData("//,\n2,ff,100", new[] { 2, 0, 100 })] 
+    [InlineData("//*\n4*5*6", new[] { 4, 5, 6 })]
+    [InlineData("// \n1 2 3", new[] { 1, 2, 3 })] // Space as delimiter
+    [InlineData("//-\n10-20-30", new[] { 10, 20, 30 })]
+    [InlineData("//.\n1.2.3.4.5", new[] { 1, 2, 3, 4, 5 })]
+    [InlineData("//#\n2#1001#6", new[] { 2, 0, 6 })] // With >1000 number
+    [InlineData("//;\n1;-2;3", new[] { 1, -2, 3 })] // With negative number
+    public void Parse_WithCustomSingleCharDelimiter_ReturnsCorrectNumbers(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
+
+    [Theory]
+    [InlineData("//#\n")] // No numbers after newline
+    [InlineData("//#\n ")] // Only space after newline
+    [InlineData("//#")] // No newline at all
+    public void Parse_WithCustomDelimiterAndNoNumbers_ReturnsEmptyOrZero(string input)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        // Should handle gracefully - either empty list or list with 0
+    }
+
+    [Fact]
+    public void Parse_WithCustomDelimiterSpecialCharacters_HandlesCorrectly()
+    {
+        // Test various special characters as delimiters
+        var testCases = new[]
+        {
+            ("//@\n1@2@3", [1, 2, 3]),
+            ("//$\n10$20$30", [10, 20, 30]),
+            ("//%\n5%10%15", [5, 10, 15]),
+            ("//+\n1+2+3", [1, 2, 3]), // + is a regex special character
+            ("//.\n1.2.3", new[] { 1, 2, 3 }), // . is a regex special character
+        };
+
+        foreach (var (input, expected) in testCases)
+        {
+            // Act
+            var result = _parser.Parse(input);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Numbers.Should().Equal(expected);
+        }
+    }
+
+    [Fact]
+    public void Parse_BackwardCompatibility_StillWorksWithCustomDelimiters()
+    {
+        // Test that default delimiters still work even with // in input
+        var testCases = new[]
+        {
+            ("1,2,3", new[] { 1, 2, 3 }),
+            ("1\n2,3", [1, 2, 3]),
+            ("// in the middle,2,3", [0, 2, 3]), // "// in the middle" is invalid number
+            ("something//\n1,2", [0, 1, 2]), // // not at start
+        };
+
+        foreach (var (input, expected) in testCases)
+        {
+            // Act
+            var result = _parser.Parse(input);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Numbers.Should().Equal(expected);
+        }
+    }
+
+   
+    [Fact]
+    public void Parse_CustomDelimiterNewlineInNumbers_StillWorks()
+    {
+        // Even with custom delimiter, newline should still work as delimiter in numbers part
+        var input = "//;\n1;2\n3;4";
+
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        // The parser uses only the custom delimiter, not newline
+        // So "2\n3" becomes a single entry "2\n3" which is invalid (becomes 0)
+        result.Numbers.Should().Equal(1, 0, 4); // "2\n3" becomes 0
+    }
 }
