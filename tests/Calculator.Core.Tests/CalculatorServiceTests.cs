@@ -176,12 +176,89 @@ public class CalculatorServiceTests
         result.Result.Should().Be(expected);
     }
 
+    [Theory]
+    [InlineData("1\n2,3", 6)]
+    [InlineData("1\n2\n3", 6)]
+    [InlineData("10\n20,30", 60)]
+    [InlineData("1\n2,3\n4,5\n6", 21)]
+    [InlineData("100\n200\n300", 600)]
+    [InlineData("\n1,2", 3)] // Leading newline
+    [InlineData("1,2\n", 3)] // Trailing newline
+    [InlineData("1\n\n2", 3)] // Multiple newlines
+    public void Add_WithNewlineDelimiter_CalculatesCorrectSum(string input, int expected)
+    {
+        // Arrange
+        var numbers = ParseNumbersWithNewlines(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Add_WithMixedDelimitersAndInvalidNumbers_HandlesCorrectly()
+    {
+        // Arrange
+        var input = "1\nabc,3\ndef\n5";
+        var numbers = new List<int> { 1, 0, 3, 0, 5 };
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(9); // 1 + 0 + 3 + 0 + 5
+    }
+
+    [Fact]
+    public void Add_WithOnlyNewlines_ReturnsZero()
+    {
+        // Arrange
+        var input = "\n\n\n";
+        var numbers = new List<int>();
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(0);
+    }
+
+
     // Helper method to parse numbers from string for test setup
     private List<int> ParseNumbersFromString(string input)
     {
         if (string.IsNullOrEmpty(input))
             return [0];
 
-        return [.. input.Split(',').Select(s => int.TryParse(s, out int n) ? n : 0)];
+        return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(s => int.TryParse(s, out int n) ? n : 0)];
+    }
+
+    // New helper method specifically for newline tests
+    private List<int> ParseNumbersWithNewlines(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [0];
+
+        return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(s => int.TryParse(s, out int n) ? n : 0)];
     }
 }

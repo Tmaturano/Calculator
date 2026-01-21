@@ -24,7 +24,10 @@ public class IntegrationTests
     [InlineData("1,5000", 5001)]
     [InlineData("4,-3", 1)]
     [InlineData("5,tytyt", 5)]
-    [InlineData("1,2,3,4,5,6,7,8,9,10,11,12", 78)]    
+    [InlineData("1,2,3,4,5,6,7,8,9,10,11,12", 78)]
+    [InlineData("1\n2,3", 6)]
+    [InlineData("10\n20,30", 60)]
+    [InlineData("1\n2\n3\n4\n5", 15)]
     public void Add_WithRealDependencies_ReturnsCorrectResult(string input, int expected)
     {
         // Act

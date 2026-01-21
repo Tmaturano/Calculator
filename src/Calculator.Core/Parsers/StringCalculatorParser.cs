@@ -14,7 +14,8 @@ public class StringCalculatorParser : IInputParser
             return request;
         }
 
-        var numbers = input.Split(',')
+        var delimiters = new[] { ',', '\n' };
+        var numbers = input.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
             .Select(ParseNumber)
             .ToList();
 
