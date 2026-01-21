@@ -28,10 +28,11 @@ public class IntegrationTests
     [InlineData("//#\n2#5", 7)]
     [InlineData("//,\n2,ff,100", 102)]
     [InlineData("//[***]\n11***22***33", 66)]
-    [InlineData("//[---]\n10---20---30", 60)]
-    [InlineData("//[xyz]\n1xyz2xyz3xyz4", 10)]
-    [InlineData("//[sep]\n10sep20sep30sep40", 100)]
-    [InlineData("//[!!!!]\n1!!!!2!!!!3!!!!4!!!!5", 15)]
+    [InlineData("//[*][!!][r9r]\n11r9r22*hh*33!!44", 110)]
+    [InlineData("//[*][%]\n1*2%3", 6)]
+    [InlineData("//[**][%%]\n1**2%%3**4", 10)]
+    [InlineData("//[sep][,]\n1sep2,3sep4", 10)]
+    [InlineData("//[+][-][*]\n1+2-3*4", 10)]
     public void Add_WithRealDependencies_ReturnsCorrectResult(string input, int expected)
     {
         // Act

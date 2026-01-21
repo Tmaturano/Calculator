@@ -561,6 +561,32 @@ public class CalculatorServiceTests
         result.Result.Should().Be(expected);
     }
 
+    [Theory]
+    [InlineData("//[*][!!][r9r]\n11r9r22*hh*33!!44", 110)]
+    [InlineData("//[*][%]\n1*2%3", 6)]
+    [InlineData("//[**][%%]\n1**2%%3**4", 10)]
+    [InlineData("//[sep][,]\n1sep2,3sep4", 10)]
+    [InlineData("//[+][-][*]\n1+2-3*4", 10)]
+    [InlineData("//[abc][def][ghi]\n1abc2def3ghi4", 10)]
+    [InlineData("//[!!][??]\n10!!20??30!!40", 100)]
+    [InlineData("//[**][***][****]\n1**2***3****4", 10)]
+    public void Add_WithMultipleCustomDelimiters_ReturnsCorrectSum(string input, int expected)
+    {
+        var parser = new StringCalculatorParser();
+        var validator = new StringCalculatorValidator();
+        var calculator = new CalculatorService(parser, validator);
+
+        // Act
+        var result = calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    #region Helper Methods   
+
     // Helper method for parsing with any length delimiter
     private List<int> ParseNumbersWithCustomDelimiterAnyLength(string input)
     {
@@ -636,4 +662,6 @@ public class CalculatorServiceTests
 
         return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries).Select(s => int.TryParse(s, out int n) ? n : 0)];
     }
+
+    #endregion
 }

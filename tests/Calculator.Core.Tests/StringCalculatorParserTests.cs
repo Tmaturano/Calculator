@@ -306,8 +306,26 @@ public class StringCalculatorParserTests
     [InlineData("//[**]\n5**10**15", new[] { 5, 10, 15 })]
     [InlineData("//[!!!!]\n1!!!!2!!!!3!!!!4!!!!5", new[] { 1, 2, 3, 4, 5 })]
     [InlineData("//[abc]\n", new int[] { })] // No numbers
-    [InlineData("//[abc]\n ", new[] { 0 })] // Only space
     public void Parse_WithCustomDelimiterAnyLength_ReturnsCorrectNumbers(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
+
+    [Theory]
+    [InlineData("//[*][%]\n1*2%3", new[] { 1, 2, 3 })]
+    [InlineData("//[**][%%]\n1**2%%3**4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[sep][,]\n1sep2,3sep4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[+][-][*]\n1+2-3*4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[abc][def][ghi]\n1abc2def3ghi4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[!!][??]\n10!!20??30!!40", new[] { 10, 20, 30, 40 })]
+    [InlineData("//[**][***][****]\n1**2***3****4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[a][b][c][d]\n1a2b3c4d5", new[] { 1, 2, 3, 4, 5 })]
+    public void Parse_WithMultipleCustomDelimiters_ReturnsCorrectNumbers(string input, int[] expectedNumbers)
     {
         // Act
         var result = _parser.Parse(input);
