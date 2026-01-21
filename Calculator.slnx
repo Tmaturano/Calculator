@@ -3,5 +3,7 @@
     <Project Path="src/Calculator.Console/Calculator.Console.csproj" />
     <Project Path="src/Calculator.Core/Calculator.Core.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Calculator.Core.Tests/Calculator.Core.Tests.csproj" />
+  </Folder>
 </Solution>
