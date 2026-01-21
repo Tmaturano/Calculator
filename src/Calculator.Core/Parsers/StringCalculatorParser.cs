@@ -1,4 +1,5 @@
-﻿using Calculator.Core.Models;
+﻿using Calculator.Core.Constants;
+using Calculator.Core.Models;
 
 namespace Calculator.Core.Parsers;
 
@@ -28,6 +29,11 @@ public class StringCalculatorParser : IInputParser
         if (string.IsNullOrEmpty(numberString))
             return 0;
 
-        return int.TryParse(numberString, out int number) ? number : 0;
+        if (int.TryParse(numberString, out int number))
+        {
+            return number > CalculatorConstant.MaxNumberAllowed ? 0 : number;
+        }
+
+        return 0;
     }
 }

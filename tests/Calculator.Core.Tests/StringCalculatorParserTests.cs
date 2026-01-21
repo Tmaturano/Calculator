@@ -119,4 +119,82 @@ public class StringCalculatorParserTests
         result.Should().NotBeNull();
         result.Numbers.Should().BeEmpty(); // StringSplitOptions.RemoveEmptyEntries removes all
     }
+
+    [Theory]
+    [InlineData("2,1001,6", new[] { 2, 0, 6 })]
+    [InlineData("1000,1001", new[] { 1000, 0 })]
+    [InlineData("1001,1002,1003", new[] { 0, 0, 0 })]
+    [InlineData("500,1500,2000,300", new[] { 500, 0, 0, 300 })]
+    [InlineData("999,1000,1001,1002", new[] { 999, 1000, 0, 0 })]
+    [InlineData("0,1001,0", new[] { 0, 0, 0 })]
+    [InlineData("1001\n1002,1003", new[] { 0, 0, 0 })] // With newlines
+    [InlineData("100\n1001,2000\n300", new[] { 100, 0, 0, 300 })]
+    public void Parse_NumbersGreaterThan1000_AreConvertedToZero(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
+
+    [Theory]
+    [InlineData("abc,1001,def", new[] { 0, 0, 0 })] // Invalid text and >1000
+    [InlineData("999,notnumber,1001", new[] { 999, 0, 0 })]
+    [InlineData("1001,xyz,2000", new[] { 0, 0, 0 })]
+    public void Parse_InvalidNumbersAndGreaterThan1000_AllBecomeZero(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
+
+    [Theory]
+    [InlineData("-1,1001,1002", new[] { -1, 0, 0 })] // Negative preserved, >1000 becomes 0
+    [InlineData("1001,-1002,2000", new[] { 0, -1002, 0 })]
+    [InlineData("-999,1000,1001", new[] { -999, 1000, 0 })]
+    public void Parse_NegativeNumbersGreaterThan1000_NegativePreserved(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
+
+    [Fact]
+    public void Parse_BoundaryValues_HandlesCorrectly()
+    {
+        // Test boundary around 1000
+        var parser = new StringCalculatorParser();
+
+        // Act
+        var result999 = parser.Parse("999");
+        var result1000 = parser.Parse("1000");
+        var result1001 = parser.Parse("1001");
+
+        // Assert
+        result999.Numbers.Should().Equal(999);
+        result1000.Numbers.Should().Equal(1000);
+        result1001.Numbers.Should().Equal(0); // 1001 > 1000, so becomes 0
+    }
+
+    [Fact]
+    public void Parse_VeryLargeNumbers_AreConvertedToZero()
+    {
+        // Arrange
+        var input = "999999,1000000,-999999";
+
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(0, 0, -999999); // Both large numbers become 0, negative preserved
+    }
 }

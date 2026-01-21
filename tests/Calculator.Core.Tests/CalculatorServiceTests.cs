@@ -348,6 +348,91 @@ public class CalculatorServiceTests
         _validator.Received(1).Validate(numbers);
     }
 
+    [Theory]
+    [InlineData("2,1001,6", 8)]
+    [InlineData("1000,1001", 1000)] // 1000 is valid, 1001 becomes 0
+    [InlineData("1001,1002,1003", 0)] // All numbers > 1000
+    [InlineData("500,1500,2000,300", 800)] // 500 + 0 + 0 + 300
+    [InlineData("999,1000,1001,1002", 1999)] // 999 + 1000 + 0 + 0
+    [InlineData("0,1001,0", 0)] // Only 1001 which becomes 0
+    public void Add_NumbersGreaterThan1000_AreTreatedAsZero(string input, int expected)
+    {
+        // Arrange
+        var numbers = ParseNumbersFromStringWithMax1000(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("2,1001,-6", new[] { -6 })] // 1001 becomes 0, -6 is negative
+    [InlineData("-1,1001,1002", new[] { -1 })] // Negative takes precedence
+    [InlineData("1001,-1002,2000", new[] { -1002 })] // Multiple >1000 and one negative
+    public void Add_NumbersGreaterThan1000WithNegatives_ReturnsNegativeError(string input, int[] expectedNegatives)
+    {
+        // Arrange
+        var numbers = ParseNumbersFromStringWithMax1000(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers))
+            .Do(x => throw new NegativeNumberException([.. expectedNegatives]));
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Negative numbers are not allowed");
+    }
+
+    [Fact]
+    public void Add_NumbersGreaterThan1000WithNewlines_HandlesCorrectly()
+    {
+        // Arrange
+        var input = "100\n1001,2000\n300";
+        var numbers = new List<int> { 100, 0, 0, 300 }; // 1001 and 2000 become 0
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(400); // 100 + 0 + 0 + 300
+    }
+
+    // New helper method that respects the 1000 limit
+    private List<int> ParseNumbersFromStringWithMax1000(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [0];
+
+        return [.. input.Split([',', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(s =>
+            {
+                if (int.TryParse(s, out int n))
+                {
+                    return n > 1000 ? 0 : n;
+                }
+                return 0;
+            })];
+    }
+
 
     // Helper method to parse numbers from string for test setup
     private List<int> ParseNumbersFromString(string input)

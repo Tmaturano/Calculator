@@ -21,12 +21,14 @@ public class IntegrationTests
     [InlineData("1", 1)]
     [InlineData("1,2", 3)]
     [InlineData("20", 20)]
-    [InlineData("1,5000", 5001)]
     [InlineData("5,tytyt", 5)]
     [InlineData("1,2,3,4,5,6,7,8,9,10,11,12", 78)]
     [InlineData("1\n2,3", 6)]
-    [InlineData("10\n20,30", 60)]
-    [InlineData("1\n2\n3\n4\n5", 15)]
+    [InlineData("2,1001,6", 8)]
+    [InlineData("1000,1001", 1000)]
+    [InlineData("1001,1002,1003", 0)]
+    [InlineData("500,1500,2000,300", 800)]
+    [InlineData("100\n1001,2000\n300", 400)]
     public void Add_WithRealDependencies_ReturnsCorrectResult(string input, int expected)
     {
         // Act
@@ -42,9 +44,9 @@ public class IntegrationTests
     [InlineData("1,-2,3", new[] { -2 })]
     [InlineData("-1", new[] { -1 })]
     [InlineData("-1,-2,-3", new[] { -1, -2, -3 })]
-    [InlineData("10,-5,-3,2", new[] { -5, -3 })]
-    [InlineData("1\n-2,3", new[] { -2 })]
-    [InlineData("-1\n-2\n-3", new[] { -1, -2, -3 })]
+    [InlineData("2,1001,-6", new[] { -6 })] // 1001 becomes 0, -6 is negative
+    [InlineData("-1,1001,1002", new[] { -1 })] // >1000 numbers become 0
+    [InlineData("1001,-1002,2000", new[] { -1002 })]
     public void Add_WithNegativeNumbers_ReturnsFailure(string input, int[] expectedNegatives)
     {
         // Act
@@ -91,5 +93,20 @@ public class IntegrationTests
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("-20");
         result.ErrorMessage.Should().Contain("-40");
+    }
+
+    [Fact]
+    public void Add_BoundaryCondition1000_WorksCorrectly()
+    {
+        // Test numbers around the 1000 boundary
+        var calculator = new CalculatorService(
+            new StringCalculatorParser(),
+            new StringCalculatorValidator());
+
+        // Act & Assert
+        calculator.Add("999").Result.Should().Be(999);
+        calculator.Add("1000").Result.Should().Be(1000);
+        calculator.Add("1001").Result.Should().Be(0);
+        calculator.Add("999,1000,1001").Result.Should().Be(1999); // 999 + 1000 + 0
     }
 }
