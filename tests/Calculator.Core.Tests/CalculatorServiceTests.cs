@@ -534,6 +534,67 @@ public class CalculatorServiceTests
         return ParseNumbersFromString(input);
     }
 
+    [Theory]
+    [InlineData("//[***]\n11***22***33", 66)] // Requirement 7 example
+    [InlineData("//[---]\n10---20---30", 60)]
+    [InlineData("//[xyz]\n1xyz2xyz3xyz4", 10)]
+    [InlineData("//[;]\n1;2;3", 6)] // Single character in brackets (still works)
+    [InlineData("//[***]\n1***1001***2", 3)] // With >1000 number
+    [InlineData("//[sep]\n10sep20sep30sep40", 100)]
+    [InlineData("//[**]\n5**10**15", 30)]
+    [InlineData("//[!!!!]\n1!!!!2!!!!3!!!!4!!!!5", 15)]
+    public void Add_WithCustomDelimiterAnyLength_ReturnsCorrectSum(string input, int expected)
+    {
+        // Arrange
+        var numbers = ParseNumbersWithCustomDelimiterAnyLength(input);
+        var request = new CalculationRequest { Input = input, Numbers = numbers };
+
+        _parser.Parse(input).Returns(request);
+        _validator.When(v => v.Validate(numbers)).Do(x => { });
+
+        // Act
+        var result = _calculator.Add(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Success.Should().BeTrue();
+        result.Result.Should().Be(expected);
+    }
+
+    // Helper method for parsing with any length delimiter
+    private List<int> ParseNumbersWithCustomDelimiterAnyLength(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return [0];
+
+        if (input.StartsWith("//["))
+        {
+            int newLineIndex = input.IndexOf('\n');
+            if (newLineIndex == -1)
+                return [0];
+
+            // Extract delimiter between [ and ]
+            int startBracket = input.IndexOf('[');
+            int endBracket = input.IndexOf(']');
+
+            if (startBracket == -1 || endBracket == -1 || endBracket <= startBracket)
+                return [0];
+
+            string delimiter = input[(startBracket + 1)..endBracket];
+            string numbersPart = input[(newLineIndex + 1)..];
+
+            return [.. numbersPart.Split([delimiter], StringSplitOptions.RemoveEmptyEntries)
+                .Select(s =>
+                {
+                    if (int.TryParse(s, out int n))
+                        return n > 1000 ? 0 : n;
+                    return 0;
+                })];
+        }
+
+        return ParseNumbersWithCustomDelimiter(input);
+    }
+
     // New helper method that respects the 1000 limit
     private List<int> ParseNumbersFromStringWithMax1000(string input)
     {

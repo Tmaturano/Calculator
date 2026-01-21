@@ -295,4 +295,25 @@ public class StringCalculatorParserTests
         // So "2\n3" becomes a single entry "2\n3" which is invalid (becomes 0)
         result.Numbers.Should().Equal(1, 0, 4); // "2\n3" becomes 0
     }
+
+    [Theory]
+    [InlineData("//[***]\n11***22***33", new[] { 11, 22, 33 })]
+    [InlineData("//[---]\n10---20---30", new[] { 10, 20, 30 })]
+    [InlineData("//[xyz]\n1xyz2xyz3xyz4", new[] { 1, 2, 3, 4 })]
+    [InlineData("//[;]\n1;2;3", new[] { 1, 2, 3 })] // Single character in brackets
+    [InlineData("//[***]\n1***1001***2", new[] { 1, 0, 2 })] // With >1000 number
+    [InlineData("//[sep]\n10sep20sep30sep40", new[] { 10, 20, 30, 40 })]
+    [InlineData("//[**]\n5**10**15", new[] { 5, 10, 15 })]
+    [InlineData("//[!!!!]\n1!!!!2!!!!3!!!!4!!!!5", new[] { 1, 2, 3, 4, 5 })]
+    [InlineData("//[abc]\n", new int[] { })] // No numbers
+    [InlineData("//[abc]\n ", new[] { 0 })] // Only space
+    public void Parse_WithCustomDelimiterAnyLength_ReturnsCorrectNumbers(string input, int[] expectedNumbers)
+    {
+        // Act
+        var result = _parser.Parse(input);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Numbers.Should().Equal(expectedNumbers);
+    }
 }

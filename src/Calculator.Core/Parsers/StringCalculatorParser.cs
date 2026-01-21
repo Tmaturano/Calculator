@@ -30,9 +30,10 @@ public class StringCalculatorParser : IInputParser
         // Find the position of the first newline after the custom delimiter prefix
         int newLineIndex = input.IndexOf('\n');
 
-        if (newLineIndex == -1)
+        if (newLineIndex == -1 || newLineIndex <= CalculatorConstant.CustomDelimiterPrefix.Length)
         {
-            // No newline found, treat as invalid format and parse with defaults
+            // No newline found or delimiter specification is empty
+            // Treat as invalid format and parse with defaults
             return ParseWithDefaultDelimiters(input, request);
         }
 
@@ -41,16 +42,41 @@ public class StringCalculatorParser : IInputParser
 
         // Extract the numbers part (everything after \n)
         string numbersPart = input[(newLineIndex + 1)..];
-                
-        char customDelimiter = delimiterSpec[0];
 
-        // Parse numbers using custom delimiter
-        var numbers = numbersPart.Split([customDelimiter], StringSplitOptions.RemoveEmptyEntries)
-            .Select(ParseNumber)
-            .ToList();
+        // Check if it's a single character delimiter (Requirement 6) or bracket format (Requirement 7)
+        if (delimiterSpec.StartsWith(CalculatorConstant.CustomDelimiterStart) &&
+            delimiterSpec.EndsWith(CalculatorConstant.CustomDelimiterEnd))
+        {
+            // Requirement 7: Delimiter of any length in brackets
+            string customDelimiter = delimiterSpec[
+                CalculatorConstant.CustomDelimiterStart.Length..^CalculatorConstant.CustomDelimiterEnd.Length];
 
-        request.Numbers = numbers;
-        return request;
+            // Parse numbers using custom delimiter of any length
+            var numbers = numbersPart.Split([customDelimiter], StringSplitOptions.RemoveEmptyEntries)
+                .Select(ParseNumber)
+                .ToList();
+
+            request.Numbers = numbers;
+            return request;
+        }
+        else if (delimiterSpec.Length == 1)
+        {
+            // Requirement 6: Single character delimiter
+            char customDelimiter = delimiterSpec[0];
+
+            // Parse numbers using custom delimiter
+            var numbers = numbersPart.Split([customDelimiter], StringSplitOptions.RemoveEmptyEntries)
+                .Select(ParseNumber)
+                .ToList();
+
+            request.Numbers = numbers;
+            return request;
+        }
+        else
+        {
+            // Invalid delimiter format - fall back to default parsing
+            return ParseWithDefaultDelimiters(input, request);
+        }
     }
 
     private CalculationRequest ParseWithDefaultDelimiters(string input, CalculationRequest request)

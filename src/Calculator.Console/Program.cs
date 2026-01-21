@@ -12,6 +12,7 @@ var calculator = serviceProvider.GetRequiredService<ICalculatorService>();
 Console.WriteLine("String Calculator");
 Console.WriteLine("Enter numbers separated by commas or newlines:");
 Console.WriteLine("Example: 1\n2,3 will return 6");
+Console.WriteLine("Example: //#\\n2#5 will return 7");
 Console.WriteLine("Enter 'exit' to quit.");
 
 while (true)
@@ -25,7 +26,7 @@ while (true)
     // Convert literal "\n" to actual newline character
     if (input != null)
     {
-        input = input.Replace("\\n", Environment.NewLine, StringComparison.Ordinal);
+        input = input.Replace("\\n", "\n", StringComparison.Ordinal);
     }
 
     var result = calculator.Add(input);
