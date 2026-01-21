@@ -43,20 +43,6 @@ public class StringCalculatorParserTests
     }
 
     [Fact]
-    public void Parse_MoreThanTwoNumbers_ThrowsArgumentException()
-    {
-        // Arrange
-        var input = "1,2,3,4";
-
-        // Act
-        Action act = () => _parser.Parse(input);
-
-        // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("Maximum of 2 numbers are allowed");
-    }
-
-    [Fact]
     public void Parse_NullInput_ReturnsZero()
     {
         // Arrange

@@ -18,12 +18,6 @@ public class StringCalculatorParser : IInputParser
             .Select(ParseNumber)
             .ToList();
 
-        // Requirement 1: Support max 2 numbers
-        if (numbers.Count > 2)
-        {
-            throw new ArgumentException("Maximum of 2 numbers are allowed");
-        }
-
         request.Numbers = numbers;
         return request;
     }

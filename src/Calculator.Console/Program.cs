@@ -10,7 +10,7 @@ var serviceProvider = services.BuildServiceProvider();
 var calculator = serviceProvider.GetRequiredService<ICalculatorService>();
 
 Console.WriteLine("String Calculator");
-Console.WriteLine("Enter numbers separated by commas (max 2 numbers):");
+Console.WriteLine("Enter numbers separated by commas:");
 Console.WriteLine("Enter 'exit' to quit.");
 
 while (true)
